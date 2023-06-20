@@ -1,0 +1,7 @@
+# Editor files
+/tags
+/tags.*
+*.swap
+
+# OS files
+.DS_Store
