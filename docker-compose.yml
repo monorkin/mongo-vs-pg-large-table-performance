@@ -1,0 +1,28 @@
+version: "3.6"
+services:
+  app:
+    image: "ruby:3.2"
+    environment:
+      - "POSTGRES_URL=postgres://postgres:@postgres:5432/postgres"
+      - "MONGODB_URL=mongo://root:example@mongodb:27017/test_case_database"
+    volumes:
+      - "$PWD:/home/app"
+
+  postgres:
+    image: "postgres:15.3"
+    environment:
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    volumes:
+      - pg_data_store:/var/lib/postgresql/data
+
+  mongodb:
+    image: "mongo:6.0.6"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    volumes:
+      - mongodb_data_store:/data/db
+
+volumes:
+  pg_data_store: {}
+  mongodb_data_store: {}

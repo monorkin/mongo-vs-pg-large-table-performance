@@ -1,0 +1,48 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    activemodel (6.1.7.3)
+      activesupport (= 6.1.7.3)
+    activerecord (6.1.7.3)
+      activemodel (= 6.1.7.3)
+      activesupport (= 6.1.7.3)
+    activesupport (6.1.7.3)
+      concurrent-ruby (~> 1.0, >= 1.0.2)
+      i18n (>= 1.6, < 2)
+      minitest (>= 5.1)
+      tzinfo (~> 2.0)
+      zeitwerk (~> 2.3)
+    bson (4.15.0)
+    concurrent-ruby (1.2.2)
+    i18n (1.14.1)
+      concurrent-ruby (~> 1.0)
+    minitest (5.18.1)
+    mongo (2.18.2)
+      bson (>= 4.14.1, < 5.0.0)
+    mongoid (7.0.13)
+      activemodel (>= 5.1, < 6.2)
+      mongo (>= 2.7.0, < 3.0.0)
+    mysql2 (0.5.5)
+    parallel (1.23.0)
+    pg (1.5.3)
+    tzinfo (2.0.6)
+      concurrent-ruby (~> 1.0)
+    zeitwerk (2.6.8)
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  activerecord
+  activesupport
+  mongoid (~> 7.0.5)
+  mysql2
+  parallel
+  pg
+  zeitwerk
+
+RUBY VERSION
+   ruby 3.2.1p31
+
+BUNDLED WITH
+   2.4.8
