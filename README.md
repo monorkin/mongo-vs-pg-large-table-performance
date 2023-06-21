@@ -36,7 +36,7 @@ System:
 ```
 CPU: 12 Core / 24 Thread Ryzen
 MEM: 32 GB
-SSD: MVME 1TB
+SSD: NVME 1TB
 ```
 
 Output:
