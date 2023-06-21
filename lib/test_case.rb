@@ -139,11 +139,12 @@ class TestCase
 
   class << self
     def logger
-      @logger ||= if debug?
+      @logger ||= begin
         logger = ActiveSupport::TaggedLogging.new(Logger.new(STDOUT))
-        logger.tagged(self.to_s.gsub("TestCase::", ""))
-      else
-        Logger.new(nil)
+
+        logger.level = debug? ? Logger::DEBUG : Logger::INFO
+
+        logger.tagged(case_name)
       end
     end
 

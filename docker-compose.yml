@@ -8,7 +8,6 @@ services:
     volumes:
       - "$PWD:/home/app"
     working_dir: "/home/app"
-    cmd: "bin/test"
 
   postgres:
     image: "postgres:15.3"
