@@ -113,5 +113,4 @@ to look at and maintain is much easier for me than having two.
 
 ## Other people's benchmarks
 
-* [Postgres 11 vs Mongo 4 (Postgres wins in all aspects)](https://info.enterprisedb.com/rs/069-ALB-339/images/PostgreSQL_MongoDB_Benchmark-WhitepaperFinal.pdf)
-* []()
+* [Postgres 11 vs Mongo 4 (Postgres wins in all aspects, though this is very out-of-date now)](https://info.enterprisedb.com/rs/069-ALB-339/images/PostgreSQL_MongoDB_Benchmark-WhitepaperFinal.pdf)
