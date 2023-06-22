@@ -10,7 +10,7 @@ class TestCase::MongoDb < TestCase
   end
 
   def find_last_by(sort)
-    Thing.order(sort).last
+    Thing.order(sort).limit(1).first
   end
 
   def connect!

@@ -42,7 +42,37 @@ SSD: NVME 1TB
 Output:
 
 ```
+=== TEST ===
+
+[Postgres] Running test case TestCase::Postgres...
+[Postgres] Connecting to the database...
+-- create_table(:things, {:force=>true})
+   -> 0.0697s
+[Postgres] Testing bulk insertion...
+[Postgres] = Bulk insertion test finished in 51890.974626113 =
+[Postgres] Testing concurrent read-write performance...
+[Postgres] = Concurrent read-write test finished in 2941.4025252889987 =
+
+=================== Mongo DB with journaling DISABLED =========================
+[MongoDb] Running test case TestCase::MongoDb...
+[MongoDb] Connecting to the database...
+[MongoDb] Testing bulk insertion...
+[MongoDb] = Bulk insertion test finished in 12739.171727085006 =
+[MongoDb] Testing concurrent read-write performance...
+[MongoDb] = Concurrent read-write test finished in 68.91302931698738 =
+
+=================== Mongo DB with journaling ENABLED ==========================
+[MongoDb] Running test case TestCase::MongoDb...
+[MongoDb] Connecting to the database...
+[MongoDb] Testing bulk insertion...
 ```
+
+Notes:
+* Mongo used up nearly 15GB of RAM and a few gigs of disk,
+    while Postgres used 4GB of RAM and 300GB of disk space.
+* Mongo keeps data only in-memory by default, if you want to persist the data
+    you have to pass `--journal`  as a startup argument. I guess this is why
+    it's called Snapchat of databases
 
 ## Disclaimer
 
