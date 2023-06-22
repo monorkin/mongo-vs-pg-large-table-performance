@@ -92,6 +92,11 @@ Notes:
 * The stock Postgres container is configured to use up to 1.5GB of RAM. I
     changed the config to allow up to 4GB - same as Mongo, though Mongo doesn't
     seem to benefit much from being capped or uncapped.
+* _Mongo without journaling isn't a valid benchmark_ it doesn't persist anything
+    therefore it's not used as a database but rather as a cache or something
+    similar. AFAIK Postgres doesn't have any similar mode to compare to this.
+    I'm baffled as to why I have to tell *a database in 2024 A.D.* that I want
+    my data persisted - that's the primary use-case for a DB!!!
 
 |                    | Postgres (stock) | MongoDB (no journal) | MongoDB               |
 |:-------------------|:-----------------|:---------------------|:----------------------|
