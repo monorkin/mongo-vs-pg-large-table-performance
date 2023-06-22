@@ -65,6 +65,9 @@ Output:
 [MongoDb] Running test case TestCase::MongoDb...
 [MongoDb] Connecting to the database...
 [MongoDb] Testing bulk insertion...
+[MongoDb] = Bulk insertion test finished in 14510.579260853003 =
+[MongoDb] Testing concurrent read-write performance...
+[MongoDb] = Concurrent read-write test finished in 112.13109906099271 =
 ```
 
 Notes:
@@ -72,7 +75,17 @@ Notes:
     while Postgres used 4GB of RAM and 300GB of disk space.
 * Mongo keeps data only in-memory by default, if you want to persist the data
     you have to pass `--journal`  as a startup argument. I guess this is why
-    it's called Snapchat of databases
+    it's called Snapchat of databases. After re-testing with that flag ON Mongo
+    started using a lot of disk space and about 8GB of RAM.
+* From casual observation of both the Postgres and Mongo DB logs it seems like
+    Mongo is much faster when there are less then 50-60M records. Writes last
+    about 100ms. But as soon as we pass 60M write times oscillate all the way
+    from 100ms to 8s.
+
+|                    | Postgres | MongoDB (no journal) | MongoDB               |
+|:-------------------|:---------|:---------------------|:----------------------|
+| Insertion rate     | ~2000/s  | ~8000/s (x4 better)  | ~7000/s (x3.5 better) |
+| Read-write         | ~34/s    | ~1470/s (x43 better) | ~900/s (x26 better)   |
 
 ## Disclaimer
 
@@ -86,3 +99,8 @@ to me since my dataset has 500M records currently and is growing.
 I didn't test partitioning because I'd just go with Postgres or MariaDB then no
 matter how large the performance difference would be. As I said, having one DB
 to look at and maintain is much easier for me than having two.
+
+## Other people's benchmarks
+
+* [Postgres 11 vs Mongo 4 (Postgres wins in all aspects)](https://info.enterprisedb.com/rs/069-ALB-339/images/PostgreSQL_MongoDB_Benchmark-WhitepaperFinal.pdf)
+* []()
