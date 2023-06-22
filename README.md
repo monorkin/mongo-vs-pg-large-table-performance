@@ -31,7 +31,7 @@ mid-test crashes add the following option `... --rm -e "SYNC=true" app ...`
 
 ## Results
 
-System:
+**System:**
 
 ```
 CPU: 12 Core / 24 Thread Ryzen
@@ -39,7 +39,7 @@ MEM: 32 GB
 SSD: NVME 1TB
 ```
 
-Output:
+**Output:**
 
 ```
 === TEST ===
@@ -78,7 +78,8 @@ Output:
 [MongoDb] = Concurrent read-write test finished in 112.13109906099271 =
 ```
 
-Notes:
+**Notes:**
+
 * Mongo used up nearly 15GB of RAM and a few gigs of disk,
     while Postgres used 2GB of RAM and 300GB of disk space.
 * Mongo keeps data only in-memory by default, if you want to persist the data
@@ -92,11 +93,13 @@ Notes:
 * The stock Postgres container is configured to use up to 1.5GB of RAM. I
     changed the config to allow up to 4GB - same as Mongo, though Mongo doesn't
     seem to benefit much from being capped or uncapped.
-* _Mongo without journaling isn't a valid benchmark_ it doesn't persist anything
+* **Mongo without journaling isn't a valid benchmark** it doesn't persist anything
     therefore it's not used as a database but rather as a cache or something
     similar. AFAIK Postgres doesn't have any similar mode to compare to this.
     I'm baffled as to why I have to tell *a database in 2024 A.D.* that I want
     my data persisted - that's the primary use-case for a DB!!!
+
+**Comparison:**
 
 |                    | Postgres (stock) | MongoDB (no journal) | MongoDB               |
 |:-------------------|:-----------------|:---------------------|:----------------------|
