@@ -44,6 +44,7 @@ Output:
 ```
 === TEST ===
 
+============================ Stock Postgres ===================================
 [Postgres] Running test case TestCase::Postgres...
 [Postgres] Connecting to the database...
 -- create_table(:things, {:force=>true})
@@ -52,6 +53,13 @@ Output:
 [Postgres] = Bulk insertion test finished in 51890.974626113 =
 [Postgres] Testing concurrent read-write performance...
 [Postgres] = Concurrent read-write test finished in 2941.4025252889987 =
+
+=============================== Postgres ======================================
+[Postgres] Running test case TestCase::Postgres...
+[Postgres] Connecting to the database...
+-- create_table(:things, {:force=>true})
+   -> 0.0842s
+[Postgres] Testing bulk insertion...
 
 =================== Mongo DB with journaling DISABLED =========================
 [MongoDb] Running test case TestCase::MongoDb...
@@ -72,7 +80,7 @@ Output:
 
 Notes:
 * Mongo used up nearly 15GB of RAM and a few gigs of disk,
-    while Postgres used 4GB of RAM and 300GB of disk space.
+    while Postgres used 2GB of RAM and 300GB of disk space.
 * Mongo keeps data only in-memory by default, if you want to persist the data
     you have to pass `--journal`  as a startup argument. I guess this is why
     it's called Snapchat of databases. After re-testing with that flag ON Mongo
@@ -81,11 +89,14 @@ Notes:
     Mongo is much faster when there are less then 50-60M records. Writes last
     about 100ms. But as soon as we pass 60M write times oscillate all the way
     from 100ms to 8s.
+* The stock Postgres container is configured to use up to 1.5GB of RAM. I
+    changed the config to allow up to 4GB - same as Mongo, though Mongo doesn't
+    seem to benefit much from being capped or uncapped.
 
-|                    | Postgres | MongoDB (no journal) | MongoDB               |
-|:-------------------|:---------|:---------------------|:----------------------|
-| Insertion rate     | ~2000/s  | ~8000/s (x4 better)  | ~7000/s (x3.5 better) |
-| Read-write         | ~34/s    | ~1470/s (x43 better) | ~900/s (x26 better)   |
+|                    | Postgres (stock) | MongoDB (no journal) | MongoDB               |
+|:-------------------|:-----------------|:---------------------|:----------------------|
+| Insertion rate     | ~2000/s          | ~8000/s (x4 better)  | ~7000/s (x3.5 better) |
+| Read-write         | ~34/s            | ~1470/s (x43 better) | ~900/s (x26 better)   |
 
 ## Disclaimer
 

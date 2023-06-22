@@ -13,10 +13,12 @@ services:
     image: "postgres:15.3"
     environment:
       - "POSTGRES_HOST_AUTH_METHOD=trust"
+    volumes:
+      - "$PWD/postgres.conf:/etc/postgresql/postgresql.conf"
 
   mongodb:
     image: "mongo:6.0.6"
-    command: "--journal --wiredTigerCacheSizeGB 2"
+    command: "--journal --wiredTigerCacheSizeGB 4"
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example

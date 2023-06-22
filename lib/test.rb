@@ -13,11 +13,19 @@ require "uri"
 class Test
   TEST_CASES = %i[postgres mongo_db].freeze
 
-  def run(cases: TEST_CASES, sync: nil)
+  def run(cases: nil, sync: nil)
     work = proc do |c|
       case_name = "TestCase::#{c.to_s.camelize(:upper)}"
       case_name.constantize.new.run
     end
+
+    if cases.nil? || ENV["CASES"].nil?
+      cases = TEST_CASES
+    elsif ENV["CASES"]
+      cases = TEST_CASES & ENV["CASES"].split(",").map { |c| c.chomp.downcase.to_sym }
+    end
+
+    TestCase.logger.info "Comparing #{cases.join(", ")}"
 
     if sync || (sync.nil? && (ENV["SYNC"] == "true"))
       return cases.map(&work)
