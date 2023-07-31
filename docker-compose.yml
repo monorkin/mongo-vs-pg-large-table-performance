@@ -8,7 +8,7 @@ services:
     volumes:
       - "$PWD:/home/app"
     working_dir: "/home/app"
-    command: "./benchmark -c/home/app/cases.yml -s -b1_000_000 -w10_000 -C50 -d"
+    command: "./benchmark -c/home/app/cases.yml -s -b100_000_000 -w1_000_000 -C50"
 
   optimized_postgres:
     image: "postgres:15.3"
