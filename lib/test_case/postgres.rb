@@ -14,21 +14,20 @@ class TestCase::Postgres < TestCase
   end
 
   def connect!
-    # This connection will do for database-independent bug reports.
-    uri = ENV["POSTGRES_URL"]
+    uri = self.url
     logger.debug "Connecting to #{uri}"
 
     url = URI(uri)
     logger.debug "Connecting to #{url.host}:#{url.port} as #{url.user} using #{url.path[1..-1]}"
 
-    ActiveRecord::Base.establish_connection(
+    @connection = ActiveRecord::Base.establish_connection(
       adapter: "postgresql",
       host: url.host,
       port: url.port,
       username: url.user,
       password: url.password,
       database: url.path[1..-1],
-      pool: 50
+      pool: test.concurrency * 4
     )
     ActiveRecord::Base.logger = logger
 
@@ -44,6 +43,39 @@ class TestCase::Postgres < TestCase
         t.timestamps index: true
       end
     end
+  end
+
+  def with_connection(&block)
+    ActiveRecord::Base.connection_pool.with_connection(&block)
+  end
+
+  def insert_base_records
+    headers = random_thing_values(1).first.keys
+
+    Thing.copy_from_client(headers) do |copy|
+      batch_size = 1000
+      batches = (base_record_count / batch_size)
+
+      if batches.zero?
+        batches = 1
+        batch_size = base_record_count
+      end
+
+      batches.times do |i|
+        logger.debug "Inserting #{i}/#{batches} batch of #{batch_size} records"
+        random_thing_values(batch_size).map(&:values).each do |values|
+          copy << values
+        end
+      end
+    end
+  end
+
+  def clear!
+    ActiveRecord::Base.connection.execute("TRUNCATE TABLE things")
+  end
+
+  def disconnect!
+    ActiveRecord::Base.remove_connection(@connection)
   end
 
   class Thing < ActiveRecord::Base

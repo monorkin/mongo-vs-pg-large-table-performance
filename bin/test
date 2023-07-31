@@ -1,16 +1,60 @@
 #!/usr/bin/env ruby
 
+require "optparse"
+require "yaml"
+
 require_relative "../lib/test"
+
+options = {}
+OptionParser.new do |parser|
+  parser.on("-cFILE", "--case-file=FILE", "Test cases YAML file") do |v|
+    puts "Loading test cases from #{v}"
+    options[:cases] = YAML.load_file(v)
+  end
+
+  parser.on("-s", "--[no-]sync", "Run test cases synchronously") do |v|
+    options[:sync] = v
+  end
+
+  parser.on("-bCOUNT", "--base-record-count=COUNT", "Base record count / number of records in the DB before test is run") do |v|
+    options[:base_record_count] = v.to_i
+  end
+
+  parser.on("-wCOUNT", "--write-test-record-count=COUNT", "Number of records to write during the test") do |v|
+    options[:write_test_record_count] = v.to_i
+  end
+
+  parser.on("-CCOUNT", "--concurrency=COUNT", "Number of concurrent threads reading and writing data during a test") do |v|
+    options[:concurrency] = v.to_i
+  end
+
+  parser.on("-d", "--debug", "Debug mode") do |v|
+    Test.debug = true
+  end
+end.parse!
 
 puts
 puts "=== TEST ==="
 puts
 
-test = Test.new
+test = Test.new(**options)
+
+puts "Cases: #{test.cases.keys.join(", ")}"
+puts "Sync: #{test.sync}"
+puts "Base record count: #{test.base_record_count}"
+puts "Write test record count: #{test.write_test_record_count}"
+puts "Concurrency: #{test.concurrency}"
+
 results = test.run
 
 puts
 puts "=== RESULTS ==="
+puts
+puts "Cases: #{test.cases.keys.join(", ")}"
+puts "Sync: #{test.sync}"
+puts "Base record count: #{test.base_record_count}"
+puts "Write test record count: #{test.write_test_record_count}"
+puts "Concurrency: #{test.concurrency}"
 puts
 
 test_names = results.flat_map { |r| r.results.keys }.uniq.sort
@@ -21,10 +65,12 @@ test_names.each do |test_name|
   sorted_results = results.sort_by { |r| r.results[test_name] }
 
   smallest_value = sorted_results.first.results[test_name]
+  longest_name = sorted_results.map { |r| r.name.length }.max
+  longest_value = sorted_results.map { |r| r.results[test_name].to_s.length }.max
   sorted_results.each do |result|
     value = result.results[test_name]
-    relative_value = (value / smallest_value).round(2) * 100.0 - 100.0
+    relative_value = ((value / smallest_value).round(2) * 100.0 - 100.0).round(2)
 
-    puts "  #{result.name}: #{value} (+#{relative_value}%)"
+    puts "  #{result.name.ljust(longest_name)}: #{value.to_s.ljust(longest_value)} (+#{relative_value}%)"
   end
 end

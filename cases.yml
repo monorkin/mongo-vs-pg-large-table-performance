@@ -1,0 +1,15 @@
+cluster_mongo:
+  adapter: :mongo_db
+  url: "mongo://root:example@cluster_mongodb:27017/test_case_database"
+
+optimized_postgres:
+  adapter: :postgres
+  url: "postgres://postgres:@optimized_postgres:5432/postgres"
+
+mongo:
+  adapter: :mongo_db
+  url: "mongo://root:example@mongodb:27017/test_case_database"
+
+async_postgres:
+  adapter: :postgres
+  url: "postgres://postgres:@async_postgres:5432/postgres"

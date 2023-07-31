@@ -8,17 +8,31 @@ services:
     volumes:
       - "$PWD:/home/app"
     working_dir: "/home/app"
+    command: "./benchmark -c/home/app/cases.yml -s -b1_000_000 -w10_000 -C50 -d"
 
-  postgres:
+  optimized_postgres:
     image: "postgres:15.3"
     environment:
       - "POSTGRES_HOST_AUTH_METHOD=trust"
     volumes:
-      - "$PWD/postgres.conf:/etc/postgresql/postgresql.conf"
+      - "$PWD/configs/postgres.conf:/etc/postgresql/postgresql.conf"
+
+  async_postgres:
+    image: "postgres:15.3"
+    environment:
+      - "POSTGRES_HOST_AUTH_METHOD=trust"
+    volumes:
+      - "$PWD/configs/async_postgres.conf:/etc/postgresql/postgresql.conf"
+
+  cluster_mongodb:
+    image: "mongo:6.0.6"
+    command: "--journal --wiredTigerCacheSizeGB 4"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
 
   mongodb:
     image: "mongo:6.0.6"
-    command: "--journal --wiredTigerCacheSizeGB 4"
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example

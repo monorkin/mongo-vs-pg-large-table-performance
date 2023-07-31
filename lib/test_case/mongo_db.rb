@@ -14,7 +14,7 @@ class TestCase::MongoDb < TestCase
   end
 
   def connect!
-    uri = ENV["MONGODB_URL"]
+    uri = self.url
     logger.debug "Connecting to #{uri}"
 
     url = URI(uri)
@@ -29,7 +29,7 @@ class TestCase::MongoDb < TestCase
           password: url.password,
           auth_mech: :scram,
           auth_source: "admin",
-          max_pool_size: 50
+          max_pool_size: test.concurrency * 4
         }
       }
 
@@ -38,6 +38,29 @@ class TestCase::MongoDb < TestCase
 
     ::Mongoid.purge!
     Thing.create_indexes
+  end
+
+  def insert_base_records
+    batch_size = 1000
+    batches = (base_record_count / batch_size)
+
+    if batches.zero?
+      batches = 1
+      batch_size = base_record_count
+    end
+
+    batches.times do |i|
+      logger.debug "Inserting #{i}/#{batches} batch of #{batch_size} records"
+      insert_records(batch_size)
+    end
+  end
+
+  def clear!
+    Thing.collection.delete_many
+  end
+
+  def disconnect!
+    Mongoid::Clients.disconnect
   end
 
   class Thing

@@ -1,20 +1,30 @@
 # frozen_string_literal: true
 
 class TestCase
-  BASE_RECORD_COUNT = 100_000_000
-  WRITE_TEST_RECORD_COUNT = 100_000
+  extend Forwardable
 
-  attr_reader :results
+  attr_reader :test, :results, :url, :name
 
-  def initialize
+  def_delegator :test, :base_record_count
+  def_delegator :test, :write_test_record_count
+  def_delegator :test, :random_thing_values
+  def_delegator 'self.class', :logger
+
+  def initialize(test:, name:, url:)
+    @test = test
+    @url = url
+    @name = name
     @results = {}
   end
 
   def run
-    logger.info "Running test case #{self.class}..."
+    logger.info "Running test case #{name} (#{self.class})..."
 
     logger.info "Connecting to the database..."
     connect!
+
+    logger.info "Inserting #{test.base_record_count} records..."
+    insert_base_records
 
     logger.info "Testing bulk insertion..."
     results[:insert_time] = Benchmark.realtime { test_bulk_insert }
@@ -24,10 +34,22 @@ class TestCase
     results[:concurrent_read_write_time] = Benchmark.realtime { test_concurrent_read_write }
     logger.info "= Concurrent read-write test finished in #{results[:concurrent_read_write_time]} ="
 
+    logger.info "Test case #{name} (#{self.class}) finished."
+
+    logger.info "Clearing out the database..."
+    clear!
+
+    logger.info "Disconnecting from the database..."
+    disconnect!
+
     self
   end
 
   def connect!
+    raise NotImplementedError
+  end
+
+  def disconnect!
     raise NotImplementedError
   end
 
@@ -43,115 +65,104 @@ class TestCase
     raise NotImplementedError
   end
 
+  def insert_base_records
+    raise NotImplementedError
+  end
+
+  def clear!
+    raise NotImplementedError
+  end
+
+  def with_connection(&block)
+    block.call
+  end
+
   def test_bulk_insert
     batch_size = 1_000
-    target_record_count = BASE_RECORD_COUNT
-    batch_count = target_record_count / batch_size
+    batches = test.write_test_record_count / batch_size
 
-    batch_count.times do |i|
-      logger.debug "Inserting batch #{i}/#{batch_count} of #{batch_size} records..."
+    batches = 1 if batches.zero?
+
+    batches.times do |i|
+      logger.debug "Inserting batch #{i}/#{batches} of #{batch_size} records..."
       insert_records(batch_size)
     end
   end
 
   def test_concurrent_read_write
     mutex = Mutex.new
-
+    counts = { read: 0, write: 0, done_write: 0 }
     stop_reading = false
 
-    reader = Thread.new do
-      [
-        :url, :secret, :creator_id, :owner_id,
-        [:related_to_id, :related_to_type], :logged_at,
-        :created_at, :updated_at
-      ].cycle.each do |columns|
-        break if stop_reading
+    readers = test.concurrency.times.map do |i|
+      Thread.new do
+        mutex.synchronize { counts[:read] += 1 }
+        logger.debug "Starting reader #{i}"
 
-        %i[asc desc].each do |direction|
-          break if stop_reading
+        with_connection do
+          [
+            :url, :secret, :creator_id, :owner_id,
+            [:related_to_id, :related_to_type], :logged_at,
+            :created_at, :updated_at
+          ].cycle.each do |columns|
+            break if stop_reading
 
-          sort = Array(columns).map { |c| [c, direction] }.to_h
-          logger.debug "Reading last record by #{sort}"
-          find_last_by(sort)
+            %i[asc desc].each do |direction|
+              break if stop_reading
+
+              sort = Array(columns).map { |c| [c, direction] }.to_h
+              logger.debug "Reading last record by #{sort}"
+              record = find_last_by(sort)
+              logger.debug("Got record #{record&.id}")
+            end
+          end
         end
       end
     end
 
-    writer = Thread.new do
-      mutex.synchronize do
-        WRITE_TEST_RECORD_COUNT.times do |i|
-          logger.debug "Writing record #{i}"
-          insert_record
+    writers = test.concurrency.times.map do |i|
+      Thread.new do
+        mutex.synchronize { counts[:write] += 1 }
+        logger.debug "Starting writer #{i}"
+
+        with_connection do
+          test.write_test_record_count.times do |i|
+            logger.debug "Writing record #{i}"
+            insert_record
+          end
         end
+
+        mutex.synchronize { counts[:done_write] += 1 }
       end
     end
 
     supervisor = Thread.new do
       loop do
-        if mutex.try_lock
+        if counts[:read] < test.concurrency || counts[:write] < test.concurrency
           sleep 0.01
-          mutex.unlock
           next
         end
 
-        logger.debug "Waiting for the writer to finish..."
-        mutex.synchronize do
-          stop_reading = true
+        logger.debug "Waiting for the writers to finish..."
+        loop do
+          break if counts[:done_write] >= test.concurrency
+          sleep 0.1
         end
 
-        logger.debug "Terminating reader and writer..."
+        logger.debug "Terminating readers and writers..."
+        stop_reading = true
         break
       end
     end
 
-    [reader, writer, supervisor].each(&:join)
-  end
-
-  def random_thing_values(count = 1_000_000)
-    types = %w[Event User Home Component]
-
-    count.times.map do |i|
-      {
-        url: "https://example.com/#{SecureRandom.hex(5)}-#{i}",
-        secret: SecureRandom.hex(256),
-        creator_id: rand(1..100_000_000),
-        owner_id: rand(1..100_000_000),
-        related_to_id: rand(1..100_000_000),
-        related_to_type: types.sample,
-        logged_at: (-100..100).to_a.sample.minutes.ago,
-        created_at: (-100..100).to_a.sample.minutes.ago,
-        updated_at: (-100..100).to_a.sample.minutes.ago
-      }
-    end
+    [*readers, *writers, supervisor].each(&:join)
   end
 
   def logger
-    self.class.logger
-  end
-
-  def debug?
-    self.class.debug?
-  end
-
-  def name
-    self.class.case_name
+    @logger ||= test.logger.tagged(self.class.case_name).tagged(name)
   end
 
   class << self
-    def logger
-      @logger ||= begin
-        logger = ActiveSupport::TaggedLogging.new(Logger.new(STDOUT))
-
-        logger.level = debug? ? Logger::DEBUG : Logger::INFO
-
-        logger.tagged(case_name)
-      end
-    end
-
-    def debug?
-      ENV["DEBUG"] == "true"
-    end
-
     def case_name
       name.gsub(/^.*TestCase::/, "")
     end

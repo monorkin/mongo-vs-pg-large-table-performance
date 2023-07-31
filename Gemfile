@@ -7,6 +7,7 @@ git_source(:github) do |repo_name|
 end
 
 gem "activerecord"
+gem "activerecord-copy"
 gem "activesupport"
 gem "zeitwerk"
 gem "parallel"
