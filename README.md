@@ -26,85 +26,63 @@ While you can run this locally, my suggestion is that you rent out a VPS and
 let the benchmark run there over night. This is very taxing on your SSD and
 renting a VPS gives you a consistent comparison platform.
 
-On some systems running the tests in parallel may be unstable. If you experience
-mid-test crashes add the following option `... --rm -e "SYNC=true" app ...`
+There are many configuration options that you can pass to `./benchmark`. To see
+them pass `--help`. They allow you to configure the concurrency and size of the
+read-write test, the base size of the database-under-test, define which tests
+to perform against which database instances, and more.
 
-## Results
+
+## Notes
+
+Here are a few things I have learned while performing this benchmark.
+Watch out for them when running you own benchmark:
+
+* The stock Postgres container is configured to use up to 1.5GB of RAM. I
+    changed the config to allow up to 4GB - same as Mongo, though Mongo doesn't
+    seem to benefit much from being capped or uncapped.
+* The stock MongoDB configuration doesn't enable write-ahead logs/journaling.
+    **[Without this enabled MongoDB will write data to disk once every minute.](https://www.mongodb.com/docs/manual/reference/command/fsync/)**
+    This means that **any unexpected interrupt will lead to the last minute of
+    data being lost**. [With journaling enabled MongoDB can recover from an unexpected stop](https://www.mongodb.com/docs/manual/core/journaling/).
+    Journaling has a significant performance impact which is dependant on the
+    number of clients connections to an instance.
+* **[Postgres has a mode where it works similarly to MongoDB](https://www.percona.com/blog/postgresql-synchronous_commit-options-and-synchronous-standby-replication/).** If you disable
+    `synchronous_commit` then data will be written to disk every 100ms instead of being
+    written immediately. **This improves write speed 5x to 10x which makes it comparable to MongoDB**.
+* **Running this benchmark on Apple Silicone Macs will skew the results.**
+    [For historical reasons, Macs have different ways of instructing the OS to write data to disk from other Unix systems](https://eclecticlight.co/2022/02/18/how-can-you-trust-a-disk-to-write-data/).
+    **TL;DR calling fsync on a Mac doesn't actually persist the data to disk, and [this has been known for years](https://erlang.org/pipermail/erlang-patches/2008-July/000258.html) but was [recently under the spotlight](https://news.ycombinator.com/item?id=30370551).**
+    This means that if one database-under-test isn't aware of that and implements
+    persistence to disk using different system calls from the other
+    software-under-test this could cause it to perform better than it
+    would on other hardware or operating systems.
+    **Therefore, a fairer comparison between different databases is to run this
+    benchmark on a Linux machine, as it ensures that fsync behaves exactly the
+    same way for all software.**
+
+## Result
+
+The following are the results of this benchmark with the test cases defined
+in [cases.yml](./cases.yml).
+(reference the [docker-compose.yml](./docker-compose.yml) file to see the individual DB configs)
 
 **System:**
 
 ```
-CPU: 12 Core / 24 Thread Ryzen
-MEM: 32 GB
-SSD: NVME 1TB
+AWS m7a.large
+CPU: 2 vCPU
+RAM: 8 GB RAM
+DISK: 200GB
 ```
 
 **Output:**
 
 ```
-=== TEST ===
-
-============================ Stock Postgres ===================================
-[Postgres] Running test case TestCase::Postgres...
-[Postgres] Connecting to the database...
--- create_table(:things, {:force=>true})
-   -> 0.0697s
-[Postgres] Testing bulk insertion...
-[Postgres] = Bulk insertion test finished in 51890.974626113 =
-[Postgres] Testing concurrent read-write performance...
-[Postgres] = Concurrent read-write test finished in 2941.4025252889987 =
-
-=============================== Postgres ======================================
-[Postgres] Running test case TestCase::Postgres...
-[Postgres] Connecting to the database...
--- create_table(:things, {:force=>true})
-   -> 0.0842s
-[Postgres] Testing bulk insertion...
-
-=================== Mongo DB with journaling DISABLED =========================
-[MongoDb] Running test case TestCase::MongoDb...
-[MongoDb] Connecting to the database...
-[MongoDb] Testing bulk insertion...
-[MongoDb] = Bulk insertion test finished in 12739.171727085006 =
-[MongoDb] Testing concurrent read-write performance...
-[MongoDb] = Concurrent read-write test finished in 68.91302931698738 =
-
-=================== Mongo DB with journaling ENABLED ==========================
-[MongoDb] Running test case TestCase::MongoDb...
-[MongoDb] Connecting to the database...
-[MongoDb] Testing bulk insertion...
-[MongoDb] = Bulk insertion test finished in 14510.579260853003 =
-[MongoDb] Testing concurrent read-write performance...
-[MongoDb] = Concurrent read-write test finished in 112.13109906099271 =
 ```
-
-**Notes:**
-
-* Mongo used up nearly 15GB of RAM and a few gigs of disk,
-    while Postgres used 2GB of RAM and 300GB of disk space.
-* Mongo keeps data only in-memory by default, if you want to persist the data
-    you have to pass `--journal`  as a startup argument. I guess this is why
-    it's called Snapchat of databases. After re-testing with that flag ON Mongo
-    started using a lot of disk space and about 8GB of RAM.
-* From casual observation of both the Postgres and Mongo DB logs it seems like
-    Mongo is much faster when there are less then 50-60M records. Writes last
-    about 100ms. But as soon as we pass 60M write times oscillate all the way
-    from 100ms to 8s.
-* The stock Postgres container is configured to use up to 1.5GB of RAM. I
-    changed the config to allow up to 4GB - same as Mongo, though Mongo doesn't
-    seem to benefit much from being capped or uncapped.
-* **Mongo without journaling isn't a valid benchmark** it doesn't persist anything
-    therefore it's not used as a database but rather as a cache or something
-    similar. AFAIK Postgres doesn't have any similar mode to compare to this.
-    I'm baffled as to why I have to tell *a database in 2024 A.D.* that I want
-    my data persisted - that's the primary use-case for a DB!!!
 
 **Comparison:**
 
-|                    | Postgres (stock) | MongoDB (no journal) | MongoDB               |
-|:-------------------|:-----------------|:---------------------|:----------------------|
-| Insertion rate     | ~2000/s          | ~8000/s (x4 better)  | ~7000/s (x3.5 better) |
-| Read-write         | ~34/s            | ~1470/s (x43 better) | ~900/s (x26 better)   |
+**Conclusions:**
 
 ## Disclaimer
 
@@ -119,6 +97,12 @@ I didn't test partitioning because I'd just go with Postgres or MariaDB then no
 matter how large the performance difference would be. As I said, having one DB
 to look at and maintain is much easier for me than having two.
 
-## Other people's benchmarks
+## Other people's benchmarks & other relevant link
 
 * [Postgres 11 vs Mongo 4 (Postgres wins in all aspects, though this is very out-of-date now)](https://info.enterprisedb.com/rs/069-ALB-339/images/PostgreSQL_MongoDB_Benchmark-WhitepaperFinal.pdf)
+* [MongoDB docs: Synchronous writing and default disk flushing config](https://www.mongodb.com/docs/manual/reference/command/fsync/)
+* [MongoDb docs: Journaling](https://www.mongodb.com/docs/manual/core/journaling/)
+* [Postgres' synchronous_commit command](https://www.percona.com/blog/postgresql-synchronous_commit-options-and-synchronous-standby-replication/)
+* [Difference in fsync semantics on MacOS and other Unix system](https://eclecticlight.co/2022/02/18/how-can-you-trust-a-disk-to-write-data/)
+* [Erlang issue, from 15 years ago, about the MacOS fsync semantics](https://erlang.org/pipermail/erlang-patches/2008-July/000258.html)
+* [Hacker News discussion about the fsync semantics on MacOS and synchronous write performance in M1 Macs](https://news.ycombinator.com/item?id=30370551)
