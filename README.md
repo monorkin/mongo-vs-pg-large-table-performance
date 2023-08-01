@@ -78,6 +78,7 @@ Test cases:
 AWS m7a.large
 CPU: 2 vCPU
 RAM: 8 GB RAM
+SWAP: 5 GB
 DISK: 200GB
 ```
 
