@@ -64,7 +64,13 @@ Watch out for them when running you own benchmark:
 
 The following are the results of this benchmark with the test cases defined
 in [cases.yml](./cases.yml).
-(reference the [docker-compose.yml](./docker-compose.yml) file to see the individual DB configs)
+(reference the [docker-compose.yml](./docker-compose.yml) file to see the individual DB configs).
+
+Test cases:
+* cluster_mongo - tests how MongoDB performs with journaling enabled. I can't use a database that can lose 1min of data, or without a hot-standby.
+* optimized_postgres - tests how PG performs when configured to use the same amount of resources as MongoDB.
+* mongo - tests how the stock MongoDB config compares to the one with journaling enabled.
+* async_postgres - tests how fast PG can go if 100ms of data loss is acceptable
 
 **System:**
 
